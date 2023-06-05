@@ -29,15 +29,17 @@ public class Processor implements Runnable {
         try (socket; in; out) {
             String method;
             String path;
+            String params;
             String headers;
             String body;
             String[] requestLine = extractRequestLine();
             method = validateMethod(extractMethod(requestLine));
             path = validatePath(extractPath(requestLine));
+            params = extractParams(requestLine);
             headers = extract();
             body = extract();
             if (method != null && path != null) {
-                Request request = new Request(method, path, headers, body);
+                Request request = new Request(method, path, params, headers, body);
                 this.handler = server.getHandler(method, path);
                 final var filePath = Path.of(resourcesRoot.toString(), path);
                 final var mimeType = Files.probeContentType(filePath);
@@ -73,7 +75,19 @@ public class Processor implements Runnable {
     }
 
     private String extractPath(String[] requestLineParts) {
-        return requestLineParts[1];
+        String path = requestLineParts[1];
+        if (path.contains("?")) {
+            return path.substring(0, path.indexOf("?"));
+        }
+        return path;
+    }
+
+    private String extractParams(String[] requestLineParts) {
+        String path = requestLineParts[1];
+        if (!path.contains("?")) {
+            return null;
+        }
+        return path.substring(path.indexOf("?") + 1);
     }
 
     private String validatePath(String path) throws IOException {
